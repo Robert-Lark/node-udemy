@@ -2,6 +2,8 @@ const path = require("path");
 const express = require("express");
 const hbs = require("hbs");
 const app = express();
+const forecast = require('./utils/forecast')
+const geocode = require('./utils/geocode')
 
 //Defined paths for express config
 const publicDirectoryPath = path.join(__dirname, "../public");
@@ -37,13 +39,43 @@ app.get("/help", (req, res) => {
     name: "Rob Lark",
   });
 });
-
+// the below endpoint uses dynamic data retrieved from the request object (req.query.address)
+// so the url hit to not trigger an error message is http://localhost:3000/weather?address=philadelphia
 app.get("/weather", (req, res) => {
-  res.send({
-    location: "Boston",
-    forecast: "33c sunny",
-  });
+  if (!req.query.address) {
+   return res.send({
+      error: 'You must provide a location'
+    })
+      }
+      geocode(req.query.address, (error, {latitude, longtitude, location} = {}) => {
+        if (error) {
+          return res.send({error});
+        }
+
+        forecast(latitude, longtitude, location, (error, forecastData) => {
+          if (error) {
+            return res.send({error});
+          }
+          res.send({
+            forecast: forecastData,
+            location, 
+            address: req.query.address
+          })
+        });
+      });
 });
+
+app.get("/products", (req, res) => {
+  if (!req.query.address) {
+res.send({
+  error: 'You must provide a search term'
+})
+  }
+  req.query
+res.send({
+  products: []
+})
+})
 
 app.get("/help/*", (req, res) => {
   res.render("404", {
